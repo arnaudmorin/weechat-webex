@@ -137,6 +137,11 @@ def webex_hook_commands_and_completions():
                          " name: user name (like arnaud)",
                          "",
                          "webex_cmd_wsp", "")
+    weechat.hook_command("b", "Switch to buffer based on name",
+                         "<name>",
+                         " name: user name (like arnaud)",
+                         "",
+                         "webex_cmd_b", "")
 
 
 def webex_cmd_wmsg(data, buffer, buddy):
@@ -155,6 +160,27 @@ def webex_cmd_wmsg(data, buffer, buddy):
         webex_server.chats.append(chat)
     else:
         webex_server.prnt(f"No room found with name {buddy}")
+
+    return weechat.WEECHAT_RC_OK
+
+
+def webex_cmd_b(data, buffer, buddy):
+    """ Switch to a buffer """
+    global webex_server
+    chat = next((x for x in webex_server.chats if buddy in x.name), None)
+    if chat:
+        webex_server.prnt(f"Opening buffer {buddy}")
+        weechat.buffer_set(chat.buffer, "display", "1")
+    else:
+        # Maybe it's a number?
+        try:
+            number = int(buddy)
+            chat = next((x for x in webex_server.chats if number == x.get_number()), None)
+            if chat:
+                webex_server.prnt(f"Opening buffer {buddy}")
+                weechat.buffer_set(chat.buffer, "display", "1")
+        except Exception:
+            pass
 
     return weechat.WEECHAT_RC_OK
 
@@ -426,6 +452,9 @@ class Chat:
                                      weechat.WEECHAT_HOOK_SIGNAL_POINTER, self.buffer)
             if auto:
                 weechat.buffer_set(self.buffer, "display", "auto")
+
+    def get_number(self):
+        return weechat.buffer_get_integer(self.buffer, "number")
 
     def prnt(self, message):
         """ Print a message in the buffer """
