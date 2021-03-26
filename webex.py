@@ -142,6 +142,11 @@ def webex_hook_commands_and_completions():
                          " name: user name (like arnaud)",
                          "",
                          "webex_cmd_b", "")
+    weechat.hook_command("wreconnect", "Reconnect to webex",
+                         "",
+                         "",
+                         "",
+                         "webex_cmd_reconnect", "")
 
 
 def webex_cmd_wmsg(data, buffer, buddy):
@@ -225,6 +230,13 @@ def webex_cmd_wsp(data, buffer, name):
     return weechat.WEECHAT_RC_OK
 
 
+def webex_cmd_reconnect(data, buffer, _not_used):
+    """ Reconnect to webex """
+    global webex_server
+    webex_server.connect_webex()
+    return weechat.WEECHAT_RC_OK
+
+
 # ================================[ server ]==================================
 class Server(object):
     def __init__(self):
@@ -236,23 +248,8 @@ class Server(object):
         self.domain = None
 
     def connect(self):
-        # API
-        try:
-            self.webexapi = WebexTeamsAPI(access_token=self.get_config_value("access_token"))
-        except Exception as e:
-            self.prnt(f"Error while trying to connect to webex API: {e}")
-            return False
-
-        self.domain = self.get_config_value("default_domain")
-
-        # Test API and grab your name
-        try:
-            buddy = self.webexapi.people.me()
-        except Exception as e:
-            self.prnt(f"Error while trying to get me(): {e}")
-            return False
-        self.buddy = Buddy(buddy)
-        self.prnt(f"Bienvenue {self.buddy.name}")
+        """ Connect """
+        self.connect_webex()
 
         # Join rooms that are in config
         rooms_to_join = self.get_config_value("autojoin_rooms")
@@ -309,6 +306,26 @@ class Server(object):
             return False
         self.prnt('Webex Webhook created')
         return True
+
+    def connect_webex(self):
+        """Connect to webex"""
+        # API
+        try:
+            self.webexapi = WebexTeamsAPI(access_token=self.get_config_value("access_token"))
+        except Exception as e:
+            self.prnt(f"Error while trying to connect to webex API: {e}")
+            return False
+
+        self.domain = self.get_config_value("default_domain")
+
+        # Test API and grab your name
+        try:
+            buddy = self.webexapi.people.me()
+        except Exception as e:
+            self.prnt(f"Error while trying to get me(): {e}")
+            return False
+        self.buddy = Buddy(buddy)
+        self.prnt(f"Bienvenue {self.buddy.name}")
 
     def list_rooms(self, type="group"):
         """Grab room list from webex"""
@@ -448,6 +465,7 @@ class Chat:
         if self.buffer:
             weechat.buffer_set(self.buffer, "title", self.name)
             weechat.buffer_set(self.buffer, "short_name", self.name)
+            weechat.buffer_set(self.buffer, "localvar_kind", self.kind)     # I use this in external plugin (notification)
             weechat.hook_signal_send("logger_backlog",
                                      weechat.WEECHAT_HOOK_SIGNAL_POINTER, self.buffer)
             if auto:
