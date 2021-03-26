@@ -302,6 +302,10 @@ class Server(object):
                 result.append(room)
         return result
 
+    def get_room_from_id(self, room_id):
+        """Get a room from ID"""
+        return self.webexapi.rooms.get(room_id)
+
     def get_person(self, email):
         """Get person from email"""
         try:
@@ -352,11 +356,6 @@ class Server(object):
                 # Discard message from myself
                 if data['data']['personId'] == self.buddy.id:
                     self.prnt("Message from myself")
-                # Messages for a room
-                elif data['data']['roomId'] in [x.id for x in self.chats]:
-                    self.prnt(f"Receive a message for room {data['data']['roomId']}")
-                    chat = next((x for x in self.chats if x.id == data['data']['roomId']), None)
-                    chat.receive_message(data['data']['id'])
                 # Messages from a person
                 elif data['data']['roomType'] == "direct":
                     self.prnt(f"Receive a message from a person {data['data']['personId']}")
@@ -367,6 +366,19 @@ class Server(object):
                         buddy = Buddy(self.get_person_from_id(data['data']['personId']))
                         chat = Chat(self, buddy.name, buddy.id, "direct", auto=False)
                         self.chats.append(chat)
+                    chat.receive_message(data['data']['id'])
+                # Messages for a room
+                elif data['data']['roomId'] in [x.id for x in self.chats]:
+                    self.prnt(f"Receive a message for room {data['data']['roomId']}")
+                    chat = next((x for x in self.chats if x.id == data['data']['roomId']), None)
+                    chat.receive_message(data['data']['id'])
+                # Messages with a mention in a not opened room
+                elif data['data']['roomType'] == "group" and self.buddy.id in data['data']['mentionedPeople']:
+                    self.prnt(f"Receive a message for closed room {data['data']['roomId']} with mention @me")
+                    # Create a new chat
+                    room = self.get_room_from_id(data['data']['roomId'])
+                    chat = Chat(self, room.title, room.id, "room", auto=False)
+                    self.chats.append(chat)
                     chat.receive_message(data['data']['id'])
         except Exception as e:
             self.prnt(f"Error while receiving data {e}")
