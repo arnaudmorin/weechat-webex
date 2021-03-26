@@ -59,9 +59,6 @@ webex_config_option = {}
 webex_server = None
 
 
-# =================================[ socket ]=================================
-
-
 # =================================[ config ]=================================
 
 def webex_config_init():
@@ -113,16 +110,6 @@ def webex_config_read():
 def webex_config_write():
     """ Write config file """
     global webex_config_file, webex_config_section, webex_config_option, webex_server
-
-    # rooms_string = ""
-    # directs_string = ""
-    # for chat in webex_server.chats:
-    #     if chat.kind == "room":
-    #         rooms_string += f",{chat.id}"
-    #     else:
-    #         directs_string += f",{chat.id}"
-    # weechat.config_option_set(webex_config_option["autojoin_rooms"], rooms_string)
-    # weechat.config_option_set(webex_config_option["autojoin_directs"], directs_string)
     return weechat.config_write(webex_config_file)
 
 
@@ -377,7 +364,7 @@ class Server(object):
                     # If this is first time we are talking to this person
                     # Create a new chat
                     if not chat:
-                        buddy = Buddy(self.get_people_from_id(data['data']['personId']))
+                        buddy = Buddy(self.get_person_from_id(data['data']['personId']))
                         chat = Chat(self, buddy.name, buddy.id, "direct", auto=False)
                         self.chats.append(chat)
                     chat.receive_message(data['data']['id'])
@@ -461,15 +448,10 @@ class Chat:
                                              self.server.buddy.name,
                                              message))
 
-    def close_buffer(self):
-        """ Close chat buffer. """
-        if self.buffer != "":
-            weechat.buffer_close(self.buffer)
-            self.buffer = ""
-
     def delete(self):
         """ Delete chat. """
-        self.close_buffer()
+        if self.buffer:
+            self.buffer = None
 
 
 # ================================[ buddy ]=================================
@@ -484,7 +466,7 @@ class Buddy(object):
         return email.split('@')[0]
 
 
-# ================================[ callbacks ]=================================
+# ================================[ HTTP ]=================================
 
 class HTTPRequest(BaseHTTPRequestHandler):
     def __init__(self, raw_http_request):
@@ -549,6 +531,14 @@ def webex_buffer_input_cb(data, buffer, input_data):
 
 def webex_buffer_close_cb(data, buffer):
     """ Callback called when a jabber buffer is closed. """
+    global webex_server
+    chat = get_chat_from_buffer(buffer)
+    if chat:
+        # Unset the buffer
+        chat.delete()
+        # Delete the chat from server.chats
+        webex_server.chats.remove(chat)
+
     return weechat.WEECHAT_RC_OK
 
 
