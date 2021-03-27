@@ -109,7 +109,7 @@ def webex_config_read():
 
 def webex_config_write():
     """ Write config file """
-    global webex_config_file, webex_config_section, webex_config_option, webex_server
+    global webex_config_file
     return weechat.config_write(webex_config_file)
 
 
@@ -172,7 +172,7 @@ def webex_cmd_wmsg(data, buffer, buddy):
 def webex_cmd_b(data, buffer, buddy):
     """ Switch to a buffer """
     global webex_server
-    chat = next((x for x in webex_server.chats if buddy in x.name), None)
+    chat = next((x for x in webex_server.chats if buddy.lower() in x.name.lower()), None)
     if chat:
         webex_server.prnt(f"Opening buffer {buddy}")
         weechat.buffer_set(chat.buffer, "display", "1")
