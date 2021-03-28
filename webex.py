@@ -230,10 +230,18 @@ def webex_cmd_wsp(data, buffer, name):
     return weechat.WEECHAT_RC_OK
 
 
-def webex_cmd_reconnect(data, buffer, _not_used):
+def webex_cmd_reconnect(data, buffer, access_token):
     """ Reconnect to webex """
-    global webex_server
-    webex_server.connect_webex()
+    global webex_server, webex_config_option
+    if access_token:
+        weechat.config_option_set(webex_config_option["access_token"], access_token, 1)
+
+    # Do full reconnect if sock not working
+    if not webex_server.sock:
+        webex_server.connect()
+    else:
+        webex_server.connect_webex()
+
     return weechat.WEECHAT_RC_OK
 
 
@@ -249,7 +257,8 @@ class Server(object):
 
     def connect(self):
         """ Connect """
-        self.connect_webex()
+        if not self.connect_webex():
+            return False
 
         # Join rooms that are in config
         rooms_to_join = self.get_config_value("autojoin_rooms")
@@ -326,6 +335,20 @@ class Server(object):
             return False
         self.buddy = Buddy(buddy)
         self.prnt(f"Bienvenue {self.buddy.name}")
+
+        return True
+
+    def disconnect(self):
+        if self.sock:
+            self.sock.close()
+            self.sock = None
+        if self.hook:
+            weechat.unhook(self.hook)
+            self.hook = None
+        try:
+            self.delete_webex_hook()
+        except Exception as e:
+            self.prnt(f"Error while deleting old hooks: {e}")
 
     def list_rooms(self, type="group"):
         """Grab room list from webex"""
@@ -569,13 +592,7 @@ def webex_unload_cb():
     global webex_server
     webex_server.prnt("Unloading")
     webex_config_write()
-    if webex_server.sock:
-        webex_server.sock.close()
-        webex_server.sock = None
-    if webex_server.hook:
-        weechat.unhook(webex_server.hook)
-        webex_server.hook = None
-    webex_server.delete_webex_hook()
+    webex_server.disconnect()
     return weechat.WEECHAT_RC_OK
 
 

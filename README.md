@@ -133,6 +133,8 @@ This will open a new buffer to let you write/receive message from that room.
 
 ```
 /wreconnect
+# or
+/wreconnect new_token
 ```
 This will reconnect on webex API. Usefull when your token has expired or if you want to change it.
 
