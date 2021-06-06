@@ -478,7 +478,7 @@ class Chat:
         """ Init chat """
         self.server = server
         self.name = f"{name}"
-        self.id = f"{id}"
+        self.id = f"{name}.{id}"
         self.buffer = weechat.buffer_search("python", self.id)
         self.kind = kind    # can be room or direct
         if not self.buffer:
@@ -488,7 +488,7 @@ class Chat:
         if self.buffer:
             weechat.buffer_set(self.buffer, "title", self.name)
             weechat.buffer_set(self.buffer, "short_name", self.name)
-            weechat.buffer_set(self.buffer, "localvar_kind", self.kind)     # I use this in external plugin (notification)
+            weechat.buffer_set(self.buffer, "localvar_set_kind", self.kind)     # I use this in external plugin (notification)
             weechat.hook_signal_send("logger_backlog",
                                      weechat.WEECHAT_HOOK_SIGNAL_POINTER, self.buffer)
             if auto:
