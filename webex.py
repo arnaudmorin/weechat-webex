@@ -415,16 +415,17 @@ class Server(object):
         self.webexapi.messages.create(toPersonId=person_id, text=message)
 
     def receive_message(self, raw):
-        self.prnt(raw)
+        # self.prnt(raw)
         try:
             data = json.loads(raw)
             if 'data' in data:
                 # Discard message from myself
                 if data['data']['personId'] == self.buddy.id:
-                    self.prnt("Message from myself")
+                    # self.prnt("Message from myself")
+                    pass
                 # Messages from a person
                 elif data['data']['roomType'] == "direct":
-                    self.prnt(f"Receive a message from a person {data['data']['personId']}")
+                    # self.prnt(f"Receive a message from a person {data['data']['personId']}")
                     chat = next((x for x in self.chats if x.id == data['data']['personId']), None)
                     # If this is first time we are talking to this person
                     # Create a new chat
@@ -435,12 +436,12 @@ class Server(object):
                     chat.receive_message(data['data']['id'])
                 # Messages for a room
                 elif data['data']['roomId'] in [x.id for x in self.chats]:
-                    self.prnt(f"Receive a message for room {data['data']['roomId']}")
+                    # self.prnt(f"Receive a message for room {data['data']['roomId']}")
                     chat = next((x for x in self.chats if x.id == data['data']['roomId']), None)
                     chat.receive_message(data['data']['id'])
                 # Messages with a mention in a not opened room
                 elif data['data']['roomType'] == "group" and 'mentionedPeople' in data['data'] and self.buddy.id in data['data']['mentionedPeople']:
-                    self.prnt(f"Receive a message for closed room {data['data']['roomId']} with mention @me")
+                    # self.prnt(f"Receive a message for closed room {data['data']['roomId']} with mention @me")
                     # Create a new chat
                     room = self.get_room_from_id(data['data']['roomId'])
                     chat = Chat(self, room.title, room.id, "room", auto=False)
@@ -478,11 +479,11 @@ class Chat:
         """ Init chat """
         self.server = server
         self.name = f"{name}"
-        self.id = f"{name}.{id}"
+        self.id = f"{id}"
         self.buffer = weechat.buffer_search("python", self.id)
         self.kind = kind    # can be room or direct
         if not self.buffer:
-            self.buffer = weechat.buffer_new(self.id,
+            self.buffer = weechat.buffer_new(self.name,
                                              "webex_buffer_input_cb", "",
                                              "webex_buffer_close_cb", "")
         if self.buffer:
